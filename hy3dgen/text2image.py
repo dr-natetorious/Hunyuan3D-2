@@ -31,7 +31,8 @@ class HunyuanDiTPipeline:
     def __init__(
         self,
         model_path="Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled",
-        device='cuda'
+        device='cuda',
+        cpu_offload=False,
     ):
         self.device = device
         self.pipe = AutoPipelineForText2Image.from_pretrained(
@@ -39,7 +40,12 @@ class HunyuanDiTPipeline:
             torch_dtype=torch.float16,
             enable_pag=True,
             pag_applied_layers=["blocks.(16|17|18|19)"]
-        ).to(device)
+        )
+        if cpu_offload:
+            gpu_id = int(device.split(':')[-1]) if ':' in str(device) else 0
+            self.pipe.enable_model_cpu_offload(gpu_id=gpu_id)
+        else:
+            self.pipe = self.pipe.to(device)
         self.pos_txt = ",白色背景,3D风格,最佳质量"
         self.neg_txt = "文本,特写,裁剪,出框,最差质量,低质量,JPEG伪影,PGLY,重复,病态," \
                        "残缺,多余的手指,变异的手,画得不好的手,画得不好的脸,变异,畸形,模糊,脱水,糟糕的解剖学," \
